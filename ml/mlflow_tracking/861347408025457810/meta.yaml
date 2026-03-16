@@ -1,0 +1,6 @@
+artifact_location: file:///C:/Users/My PC/Desktop/Flight-Data-System/ml/mlflow_tracking/861347408025457810
+creation_time: 1773637784703
+experiment_id: '861347408025457810'
+last_update_time: 1773637784703
+lifecycle_stage: active
+name: flight_delay_prediction
