@@ -70,7 +70,7 @@ jobs:
           python ml/train.py
 
       - name: Upload trained model
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: flight-delay-model
           path: ml/models/flight_delay_model.pkl
