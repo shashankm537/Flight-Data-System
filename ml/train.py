@@ -25,7 +25,7 @@ mlflow.set_experiment("flight_delay_prediction")
 def fetch_features():
     """Fetch engineered features from ml.features"""
     engine = create_engine(DATABASE_URL)
-    
+
     query = """
         SELECT 
             airline_code,
@@ -42,14 +42,14 @@ def fetch_features():
             is_delayed
         FROM ml.features
     """
-    
+
     df = pd.read_sql(query, engine)
     print(f"Fetched {len(df)} rows from ml.features")
     return df
 
 def prepare_data(df):
     """Prepare features and target for training"""
-    
+
     # Encode categorical columns
     df['airline_encoded'] = df['airline_code'].astype('category').cat.codes
     df['origin_encoded'] = df['origin_airport'].astype('category').cat.codes
@@ -83,34 +83,51 @@ def prepare_data(df):
     return X, y, feature_cols
 
 def train_model(X, y):
-    """Train XGBoost model and track with MLflow"""
+    """Train XGBoost model with class imbalance handling"""
 
     # Split data
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42, stratify=y if y.sum() > 1 else None
+        X, y, test_size=0.2, random_state=42,
+        stratify=y if y.sum() > 1 else None
     )
 
     print(f"Train size: {len(X_train)} | Test size: {len(X_test)}")
 
+    # Calculate scale_pos_weight to handle class imbalance
+    # This tells XGBoost to weight the minority class higher
+    neg_count = (y_train == 0).sum()
+    pos_count = (y_train == 1).sum()
+    scale_pos_weight = neg_count / pos_count if pos_count > 0 else 1
+    print(f"scale_pos_weight: {scale_pos_weight:.2f} (handles class imbalance)")
+
     with mlflow.start_run():
-        # Model parameters
+        # Model parameters with class imbalance handling
         params = {
-            "n_estimators": 100,
-            "max_depth": 4,
-            "learning_rate": 0.1,
+            "n_estimators": 200,
+            "max_depth": 5,
+            "learning_rate": 0.05,
             "subsample": 0.8,
             "colsample_bytree": 0.8,
             "random_state": 42,
-            "eval_metric": "logloss"
+            "eval_metric": "logloss",
+            "scale_pos_weight": scale_pos_weight,  # Key fix for imbalance
+            "min_child_weight": 3,
+            "gamma": 0.1
         }
 
         # Train model
         model = XGBClassifier(**params)
-        model.fit(X_train, y_train)
+        model.fit(
+            X_train, y_train,
+            eval_set=[(X_test, y_test)],
+            verbose=False
+        )
 
-        # Predictions
-        y_pred = model.predict(X_test)
+        # Use lower threshold for predictions (0.3 instead of 0.5)
+        # This makes model more sensitive to delays
         y_prob = model.predict_proba(X_test)[:, 1]
+        threshold = 0.3
+        y_pred = (y_prob >= threshold).astype(int)
 
         # Metrics
         accuracy = accuracy_score(y_test, y_pred)
@@ -125,6 +142,7 @@ def train_model(X, y):
 
         # Log to MLflow
         mlflow.log_params(params)
+        mlflow.log_param("prediction_threshold", threshold)
         mlflow.log_metric("accuracy", accuracy)
         mlflow.log_metric("f1_score", f1)
         mlflow.log_metric("precision", precision)
@@ -132,6 +150,7 @@ def train_model(X, y):
         mlflow.log_metric("auc", auc)
         mlflow.log_metric("train_size", len(X_train))
         mlflow.log_metric("test_size", len(X_test))
+        mlflow.log_metric("scale_pos_weight", scale_pos_weight)
 
         # Log model
         mlflow.xgboost.log_model(model, "model")
@@ -145,10 +164,14 @@ def train_model(X, y):
         print(f"\nConfusion Matrix:")
         print(confusion_matrix(y_test, y_pred))
 
-        # Save model locally
+        # Save model and threshold locally
         os.makedirs("ml/models", exist_ok=True)
         model_path = "ml/models/flight_delay_model.pkl"
-        joblib.dump(model, model_path)
+        joblib.dump({
+            "model": model,
+            "threshold": threshold,
+            "feature_cols": list(X.columns)
+        }, model_path)
         print(f"\nModel saved to {model_path}")
 
         return model, accuracy, f1

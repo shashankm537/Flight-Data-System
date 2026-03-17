@@ -4,15 +4,12 @@ import numpy as np
 import pandas as pd
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from typing import Optional
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
 
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
-
-# Load the trained model
 MODEL_PATH = "ml/models/flight_delay_model.pkl"
 
 app = FastAPI(
@@ -21,15 +18,19 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Load model on startup
+# Global model variables
 model = None
+threshold = 0.3
 
 @app.on_event("startup")
 async def load_model():
-    global model
+    global model, threshold
     try:
-        model = joblib.load(MODEL_PATH)
+        model_data = joblib.load(MODEL_PATH)
+        model = model_data["model"]
+        threshold = model_data["threshold"]
         print(f"Model loaded successfully from {MODEL_PATH}")
+        print(f"Prediction threshold: {threshold}")
     except Exception as e:
         print(f"Error loading model: {e}")
 
@@ -38,9 +39,9 @@ class FlightInput(BaseModel):
     airline_code: str
     origin_airport: str
     destination_airport: str
-    flight_type: str          # 'domestic' or 'international'
-    departure_hour: int       # 0-23
-    day_of_week: int          # 0=Monday, 6=Sunday
+    flight_type: str
+    departure_hour: int
+    day_of_week: int
     is_weekend: bool
     is_monsoon_season: bool
     avg_route_delay: float
@@ -56,20 +57,19 @@ class PredictionResponse(BaseModel):
 
 def encode_input(data: FlightInput) -> pd.DataFrame:
     """Encode input data for model prediction"""
-    
-    # Simple encoding — map known values
+
     airline_map = {
         'AI': 0, '6E': 1, 'SG': 2, 'G8': 3, 'UK': 4,
         'QR': 5, 'EK': 6, 'SQ': 7, 'BA': 8, 'AF': 9,
         'LH': 10, 'VS': 11, 'QF': 12, 'JL': 13, 'KL': 14
     }
-    
+
     airport_map = {
         'BOM': 0, 'DEL': 1, 'BLR': 2, 'HYD': 3, 'MAA': 4,
         'CCU': 5, 'GOI': 6, 'AMD': 7, 'DXB': 8, 'SIN': 9,
         'LHR': 10, 'JFK': 11, 'BKK': 12, 'KUL': 13, 'CDG': 14
     }
-    
+
     route = f"{data.origin_airport}-{data.destination_airport}"
     route_map = {
         'BOM-DEL': 0, 'DEL-BOM': 1, 'BOM-BLR': 2, 'DEL-BLR': 3,
@@ -78,7 +78,7 @@ def encode_input(data: FlightInput) -> pd.DataFrame:
         'BLR-SIN': 12, 'DEL-LHR': 13, 'BOM-LHR': 14, 'DEL-JFK': 15,
         'BOM-SIN': 16, 'DEL-BKK': 17, 'BOM-KUL': 18, 'DEL-CDG': 19
     }
-    
+
     features = {
         'airline_encoded': airline_map.get(data.airline_code, 99),
         'origin_encoded': airport_map.get(data.origin_airport, 99),
@@ -92,7 +92,7 @@ def encode_input(data: FlightInput) -> pd.DataFrame:
         'avg_route_delay': data.avg_route_delay,
         'avg_carrier_delay': data.avg_carrier_delay
     }
-    
+
     return pd.DataFrame([features])
 
 @app.get("/")
@@ -107,22 +107,22 @@ async def root():
 async def health():
     return {
         "status": "healthy",
-        "model_loaded": model is not None
+        "model_loaded": model is not None,
+        "threshold": threshold
     }
 
 @app.post("/predict", response_model=PredictionResponse)
 async def predict(flight: FlightInput):
     if model is None:
         raise HTTPException(status_code=503, detail="Model not loaded")
-    
+
     try:
-        # Encode input
         X = encode_input(flight)
-        
-        # Predict
+
+        # Use trained threshold for prediction
         prob = model.predict_proba(X)[0][1]
-        is_delayed = bool(prob > 0.5)
-        
+        is_delayed = bool(prob >= threshold)
+
         # Risk level
         if prob < 0.3:
             risk_level = "low"
@@ -133,9 +133,9 @@ async def predict(flight: FlightInput):
         else:
             risk_level = "high"
             message = "Flight is likely to be delayed"
-        
+
         route = f"{flight.origin_airport}-{flight.destination_airport}"
-        
+
         return PredictionResponse(
             flight=f"{flight.airline_code} {route}",
             delay_probability=round(float(prob), 4),
@@ -143,7 +143,7 @@ async def predict(flight: FlightInput):
             risk_level=risk_level,
             message=message
         )
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
