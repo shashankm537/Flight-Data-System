@@ -29,14 +29,14 @@ models:
         tests:
           - not_null
           - accepted_values:
-              values: ['domestic', 'international']
+              values: ["domestic", "international"]
 
       - name: flight_status
         description: "Current status of flight"
         tests:
           - not_null
           - accepted_values:
-              values: ['scheduled', 'active', 'landed', 'cancelled', 'unknown']
+              values: ["scheduled", "active", "landed", "cancelled", "unknown", "on_ground"]
 
   - name: fact_flights
     description: "Enriched flight fact table with delay categories"
@@ -56,11 +56,11 @@ models:
         tests:
           - not_null
           - accepted_values:
-              values: ['no delay', 'minor', 'moderate', 'severe']
+              values: ["no delay", "minor", "moderate", "severe"]
 
       - name: time_of_day
         description: "morning, afternoon, evening, night"
         tests:
           - not_null
           - accepted_values:
-              values: ['morning', 'afternoon', 'evening', 'night']
+              values: ["morning", "afternoon", "evening", "night"]
