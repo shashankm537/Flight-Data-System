@@ -31,3 +31,17 @@ services:
     environment:
       - API_URL=http://fastapi:8000
     restart: unless-stopped
+
+  metabase:
+    image: metabase/metabase:latest
+    container_name: flight_metabase
+    ports:
+      - "3000:3000"
+    environment:
+      - MB_DB_TYPE=h2
+    volumes:
+      - metabase_data:/metabase-data
+    restart: unless-stopped
+
+volumes:
+  metabase_data:
