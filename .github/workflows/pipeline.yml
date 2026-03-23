@@ -25,6 +25,12 @@ jobs:
           pip install setuptools
           pip install -r requirements.txt
 
+      - name: Run pytest tests
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          pytest tests/ -v --tb=short
+
       - name: Create dbt profiles
         run: |
           mkdir -p ~/.dbt
