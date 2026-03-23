@@ -41,6 +41,9 @@ cleaned AS (
         
         -- Flight status
         LOWER(TRIM(flight_status))      AS flight_status,
+
+        -- Departure hour
+        EXTRACT(HOUR FROM scheduled_departure)::INT AS departure_hour,
         
         -- Route
         UPPER(TRIM(origin_airport)) || '-' || 

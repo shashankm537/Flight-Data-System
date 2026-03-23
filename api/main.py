@@ -10,6 +10,7 @@ from sqlalchemy import create_engine, text
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
+engine = create_engine(DATABASE_URL) if DATABASE_URL else None
 MODEL_PATH = "ml/models/flight_delay_model.pkl"
 
 app = FastAPI(
@@ -118,12 +119,9 @@ async def predict(flight: FlightInput):
 
     try:
         X = encode_input(flight)
-
-        # Use trained threshold for prediction
         prob = model.predict_proba(X)[0][1]
         is_delayed = bool(prob >= threshold)
 
-        # Risk level
         if prob < 0.3:
             risk_level = "low"
             message = "Flight is likely to be on time"
@@ -151,7 +149,6 @@ async def predict(flight: FlightInput):
 async def get_stats():
     """Get current flight statistics from database"""
     try:
-        engine = create_engine(DATABASE_URL)
         with engine.connect() as conn:
             result = conn.execute(text("""
                 SELECT 
@@ -169,6 +166,130 @@ async def get_stats():
                 "avg_delay_mins": float(row[2]) if row[2] else 0,
                 "data_from": str(row[3]),
                 "data_to": str(row[4])
+            }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/flights")
+async def get_flights(limit: int = 50, flight_type: str = None, is_delayed: bool = None):
+    """Get recent flights with optional filters"""
+    try:
+        with engine.connect() as conn:
+            query = """
+                SELECT 
+                    flight_number,
+                    flight_date,
+                    airline_code,
+                    origin_airport,
+                    destination_airport,
+                    flight_type,
+                    flight_status,
+                    arrival_delay,
+                    is_delayed,
+                    delay_category,
+                    time_of_day
+                FROM warehouse_warehouse.fact_flights
+                WHERE 1=1
+            """
+            if flight_type:
+                query += f" AND flight_type = '{flight_type}'"
+            if is_delayed is not None:
+                query += f" AND is_delayed = {is_delayed}"
+            query += f" ORDER BY flight_date DESC LIMIT {limit}"
+
+            result = conn.execute(text(query))
+            rows = result.fetchall()
+            return {
+                "total": len(rows),
+                "flights": [
+                    {
+                        "flight_number": row[0],
+                        "flight_date": str(row[1]),
+                        "airline_code": row[2],
+                        "origin_airport": row[3],
+                        "destination_airport": row[4],
+                        "flight_type": row[5],
+                        "flight_status": row[6],
+                        "arrival_delay": float(row[7]) if row[7] else 0,
+                        "is_delayed": row[8],
+                        "delay_category": row[9],
+                        "time_of_day": row[10]
+                    }
+                    for row in rows
+                ]
+            }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/airlines")
+async def get_airlines():
+    """Get airline performance summary"""
+    try:
+        with engine.connect() as conn:
+            result = conn.execute(text("""
+                SELECT
+                    airline_code,
+                    COUNT(*) as total_flights,
+                    SUM(CASE WHEN is_delayed THEN 1 ELSE 0 END) as delayed_flights,
+                    ROUND(AVG(arrival_delay)::numeric, 2) as avg_delay_mins,
+                    ROUND(100.0 * SUM(CASE WHEN is_delayed THEN 1 ELSE 0 END) / COUNT(*), 2) as delay_rate_pct
+                FROM warehouse_warehouse.fact_flights
+                GROUP BY airline_code
+                ORDER BY delay_rate_pct DESC
+            """))
+            rows = result.fetchall()
+            return {
+                "total_airlines": len(rows),
+                "airlines": [
+                    {
+                        "airline_code": row[0],
+                        "total_flights": row[1],
+                        "delayed_flights": row[2],
+                        "avg_delay_mins": float(row[3]) if row[3] else 0,
+                        "delay_rate_pct": float(row[4]) if row[4] else 0
+                    }
+                    for row in rows
+                ]
+            }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/routes")
+async def get_routes(limit: int = 20):
+    """Get most delayed routes"""
+    try:
+        with engine.connect() as conn:
+            result = conn.execute(text(f"""
+                SELECT
+                    origin_airport,
+                    destination_airport,
+                    origin_airport || '-' || destination_airport as route,
+                    COUNT(*) as total_flights,
+                    SUM(CASE WHEN is_delayed THEN 1 ELSE 0 END) as delayed_flights,
+                    ROUND(AVG(arrival_delay)::numeric, 2) as avg_delay_mins,
+                    ROUND(100.0 * SUM(CASE WHEN is_delayed THEN 1 ELSE 0 END) / COUNT(*), 2) as delay_rate_pct
+                FROM warehouse_warehouse.fact_flights
+                GROUP BY origin_airport, destination_airport
+                ORDER BY delay_rate_pct DESC
+                LIMIT {limit}
+            """))
+            rows = result.fetchall()
+            return {
+                "total_routes": len(rows),
+                "routes": [
+                    {
+                        "origin_airport": row[0],
+                        "destination_airport": row[1],
+                        "route": row[2],
+                        "total_flights": row[3],
+                        "delayed_flights": row[4],
+                        "avg_delay_mins": float(row[5]) if row[5] else 0,
+                        "delay_rate_pct": float(row[6]) if row[6] else 0
+                    }
+                    for row in rows
+                ]
             }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

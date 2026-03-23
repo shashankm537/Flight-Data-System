@@ -14,6 +14,11 @@ models:
         tests:
           - not_null
 
+      - name: airline_code
+        description: "IATA airline code"
+        tests:
+          - not_null
+
       - name: origin_airport
         description: "IATA code of origin airport"
         tests:
@@ -38,6 +43,16 @@ models:
           - accepted_values:
               values: ["scheduled", "active", "landed", "cancelled", "unknown", "on_ground"]
 
+      - name: departure_hour
+        description: "Hour of departure 0-23"
+        tests:
+          - not_null
+
+      - name: route
+        description: "Origin-Destination route string"
+        tests:
+          - not_null
+
   - name: fact_flights
     description: "Enriched flight fact table with delay categories"
     columns:
@@ -46,8 +61,38 @@ models:
         tests:
           - not_null
 
+      - name: flight_date
+        description: "Date of the flight"
+        tests:
+          - not_null
+
+      - name: airline_code
+        description: "IATA airline code"
+        tests:
+          - not_null
+
+      - name: origin_airport
+        description: "IATA code of origin airport"
+        tests:
+          - not_null
+
+      - name: destination_airport
+        description: "IATA code of destination airport"
+        tests:
+          - not_null
+
       - name: is_delayed
         description: "True if arrival delay more than 15 mins"
+        tests:
+          - not_null
+
+      - name: is_weekend
+        description: "True if flight is on weekend"
+        tests:
+          - not_null
+
+      - name: is_monsoon_season
+        description: "True if flight is during monsoon season"
         tests:
           - not_null
 
@@ -64,3 +109,17 @@ models:
           - not_null
           - accepted_values:
               values: ["morning", "afternoon", "evening", "night"]
+
+      - name: flight_type
+        description: "domestic or international"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["domestic", "international"]
+
+      - name: flight_status
+        description: "Current status of flight"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["scheduled", "active", "landed", "cancelled", "unknown", "on_ground"]
