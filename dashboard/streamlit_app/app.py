@@ -64,7 +64,8 @@ def load_flight_data():
             time_of_day,
             day_of_week,
             is_weekend,
-            flight_status
+            flight_status,
+            is_monsoon_season
         FROM warehouse_warehouse.fact_flights
     """
     return pd.read_sql(query, engine)
@@ -92,6 +93,7 @@ page = st.sidebar.radio("Go to", [
     "Overview",
     "Airline Analysis",
     "Route Analysis",
+    "Trends & Insights",
     "Delay Predictor"
 ])
 
@@ -350,3 +352,119 @@ elif page == "Delay Predictor":
 
         except Exception as e:
             st.error(f"API Error: Make sure the FastAPI server is running. {e}")
+
+# ══════════════════════════════════
+# PAGE 5: TRENDS & INSIGHTS
+# ══════════════════════════════════
+elif page == "Trends & Insights":
+    st.title("Trends & Insights")
+    st.markdown("---")
+
+    df = load_flight_data()
+
+    # ── Delay Rate Over Time ──
+    st.subheader("📈 Delay Rate Over Time")
+    daily_stats = df.groupby('flight_date').agg(
+        total_flights=('flight_status', 'count'),
+        delayed_flights=('is_delayed', 'sum')
+    ).reset_index()
+    daily_stats['delay_rate'] = round(
+        100 * daily_stats['delayed_flights'] / daily_stats['total_flights'], 2
+    )
+    fig = px.line(
+        daily_stats,
+        x='flight_date',
+        y='delay_rate',
+        title='Daily Delay Rate (%)',
+        color_discrete_sequence=['#1D9E75']
+    )
+    fig.update_layout(height=350)
+    st.plotly_chart(fig, use_container_width=True)
+
+    st.markdown("---")
+
+    col1, col2 = st.columns(2)
+
+    # ── Time of Day Analysis ──
+    with col1:
+        st.subheader("🕐 Delays by Time of Day")
+        tod_stats = df.groupby('time_of_day').agg(
+            total_flights=('flight_status', 'count'),
+            delayed_flights=('is_delayed', 'sum')
+        ).reset_index()
+        tod_stats['delay_rate'] = round(
+            100 * tod_stats['delayed_flights'] / tod_stats['total_flights'], 2
+        )
+        tod_order = ['morning', 'afternoon', 'evening', 'night']
+        tod_stats['time_of_day'] = pd.Categorical(
+            tod_stats['time_of_day'], categories=tod_order, ordered=True
+        )
+        tod_stats = tod_stats.sort_values('time_of_day')
+        fig = px.bar(
+            tod_stats,
+            x='time_of_day',
+            y='delay_rate',
+            color='time_of_day',
+            color_discrete_sequence=['#FAC775', '#F0997B', '#E24B4A', '#085041']
+        )
+        fig.update_layout(height=350, showlegend=False)
+        st.plotly_chart(fig, use_container_width=True)
+
+    # ── Day of Week Analysis ──
+    with col2:
+        st.subheader("📅 Delays by Day of Week")
+        dow_stats = df.groupby('day_of_week').agg(
+            total_flights=('flight_status', 'count'),
+            delayed_flights=('is_delayed', 'sum')
+        ).reset_index()
+        dow_stats['delay_rate'] = round(
+            100 * dow_stats['delayed_flights'] / dow_stats['total_flights'], 2
+        )
+        dow_map = {0: 'Mon', 1: 'Tue', 2: 'Wed', 3: 'Thu', 4: 'Fri', 5: 'Sat', 6: 'Sun'}
+        dow_stats['day_name'] = dow_stats['day_of_week'].map(dow_map)
+        fig = px.bar(
+            dow_stats,
+            x='day_name',
+            y='delay_rate',
+            color='day_name',
+            color_discrete_sequence=px.colors.qualitative.Set2
+        )
+        fig.update_layout(height=350, showlegend=False)
+        st.plotly_chart(fig, use_container_width=True)
+
+    st.markdown("---")
+
+    # ── Monsoon vs Non-Monsoon ──
+    st.subheader("🌧️ Monsoon vs Non-Monsoon Delay Rate")
+    monsoon_stats = df.groupby('is_monsoon_season').agg(
+        total_flights=('flight_status', 'count'),
+        delayed_flights=('is_delayed', 'sum'),
+        avg_delay=('arrival_delay', 'mean')
+    ).reset_index()
+    monsoon_stats['delay_rate'] = round(
+        100 * monsoon_stats['delayed_flights'] / monsoon_stats['total_flights'], 2
+    )
+    monsoon_stats['season'] = monsoon_stats['is_monsoon_season'].map(
+        {True: 'Monsoon', False: 'Non-Monsoon'}
+    )
+    col1, col2 = st.columns(2)
+    with col1:
+        fig = px.bar(
+            monsoon_stats,
+            x='season',
+            y='delay_rate',
+            color='season',
+            color_discrete_sequence=['#1D9E75', '#085041']
+        )
+        fig.update_layout(height=300, showlegend=False, title='Delay Rate %')
+        st.plotly_chart(fig, use_container_width=True)
+    with col2:
+        fig = px.bar(
+            monsoon_stats,
+            x='season',
+            y='avg_delay',
+            color='season',
+            color_discrete_sequence=['#FAC775', '#F0997B']
+        )
+        fig.update_layout(height=300, showlegend=False, title='Avg Delay (mins)')
+        st.plotly_chart(fig, use_container_width=True)
