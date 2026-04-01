@@ -1,0 +1,15 @@
+artifact_uri: file:///C:/Users/My PC/Desktop/Flight-Data-System/mlruns/484163226260403053/a9a1270417374e6f9326c2199da144f1/artifacts
+end_time: 1775026033369
+entry_point_name: ''
+experiment_id: '484163226260403053'
+lifecycle_stage: active
+run_id: a9a1270417374e6f9326c2199da144f1
+run_name: awesome-shark-732
+run_uuid: a9a1270417374e6f9326c2199da144f1
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1775026025186
+status: 3
+tags: []
+user_id: My PC

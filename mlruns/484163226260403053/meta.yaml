@@ -1,0 +1,6 @@
+artifact_location: file:///C:/Users/My PC/Desktop/Flight-Data-System/mlruns/484163226260403053
+creation_time: 1775024627012
+experiment_id: '484163226260403053'
+last_update_time: 1775024627012
+lifecycle_stage: active
+name: flight_delay_prediction

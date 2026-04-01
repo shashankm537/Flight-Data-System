@@ -20,7 +20,7 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 
 # MLflow setup
 import tempfile
-mlflow.set_tracking_uri(f"file://{tempfile.gettempdir()}/mlflow_tracking")
+mlflow.set_tracking_uri("mlruns")
 mlflow.set_experiment("flight_delay_prediction")
 
 def fetch_features():
