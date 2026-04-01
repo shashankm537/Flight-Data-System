@@ -18,12 +18,13 @@
 | 📊 **Streamlit Dashboard** | [flight-data-system.streamlit.app](https://flight-data-system.streamlit.app) |
 | ⚡ **FastAPI REST API** | [flight-data-system-q1an.onrender.com](https://flight-data-system-q1an.onrender.com) |
 | 📖 **API Docs (Swagger)** | [flight-data-system-q1an.onrender.com/docs](https://flight-data-system-q1an.onrender.com/docs) |
-| 📈 **Metabase BI Dashboard** | [metabase-production-04c3.up.railway.app](https://metabase-production-04c3.up.railway.app) |
+| 📈 **Metabase — Flight Data Analytics** | [Public Dashboard 1](https://metabase-production-04c3.up.railway.app/public/dashboard/8b35977b-89c0-4b1d-a935-5a951d6bf9b1) |
+| 🕐 **Metabase — Time of Day Analysis** | [Public Dashboard 2](https://metabase-production-04c3.up.railway.app/public/dashboard/130fe479-777e-444b-bb98-4fa2b688d6db) |
+| 🗺️ **Metabase — Route Performance** | [Public Dashboard 3](https://metabase-production-04c3.up.railway.app/public/dashboard/3d3d6e9d-ae87-470c-bedf-cf12cb9e070a) |
 
 ---
 
 ## 🏗️ Architecture
-
 ```
 OpenSky Network API
         │
@@ -42,7 +43,7 @@ OpenSky Network API
          ▼
 ┌─────────────────┐
 │  dbt Transform  │  3 layers: staging → warehouse → mart
-│  (flight_       │  14 data quality tests, fact table enrichment
+│  (flight_       │  27 data quality tests, fact table enrichment
 │   transform)    │
 └────────┬────────┘
          │
@@ -57,9 +58,11 @@ OpenSky Network API
 ┌─────────────────┐    ┌─────────────────┐
 │    FastAPI      │    │    Streamlit    │
 │  /predict       │    │   Dashboard     │
-│  /stats         │    │   4 pages       │
-│  /health        │    │   Plotly charts │
-└─────────────────┘    └─────────────────┘
+│  /stats         │    │   5 pages       │
+│  /flights       │    │   Plotly charts │
+│  /airlines      │    └─────────────────┘
+│  /routes        │
+└─────────────────┘
          │
          ▼
 ┌─────────────────┐
@@ -91,7 +94,6 @@ OpenSky Network API
 ---
 
 ## 🗂️ Project Structure
-
 ```
 Flight-Data-System/
 ├── .github/workflows/
@@ -108,11 +110,11 @@ Flight-Data-System/
 │   └── models/
 │       └── flight_delay_model.pkl
 ├── api/
-│   ├── main.py               # FastAPI 4 endpoints
+│   ├── main.py               # FastAPI 7 endpoints
 │   └── Dockerfile
 ├── dashboard/
 │   ├── streamlit_app/
-│   │   └── app.py            # 4-page Streamlit dashboard
+│   │   └── app.py            # 5-page Streamlit dashboard
 │   └── Dockerfile
 ├── orchestration/
 │   └── dags/                 # Airflow DAGs
@@ -128,12 +130,36 @@ Flight-Data-System/
 - **Live data ingestion** — OpenSky Network API, bounding box covers India + Middle East + SE Asia
 - **Realistic delay simulation** — airline profiles (IndiGo 18%, SpiceJet 35%), time-of-day factors, weekend factor
 - **Rolling 60-day window** — auto-deletes old data, keeps storage lean forever
-- **dbt transformations** — 3-layer architecture with 14 passing data quality tests
+- **dbt transformations** — 3-layer architecture with 27 passing data quality tests
 - **XGBoost delay predictor** — handles class imbalance with scale_pos_weight + threshold=0.3
-- **FastAPI REST API** — live prediction endpoint with Swagger docs
-- **Streamlit dashboard** — 4 pages: Overview, Airline Analysis, Route Analysis, Delay Predictor
-- **Metabase BI dashboard** — drag and drop analytics on live flight data
+- **FastAPI REST API** — 7 endpoints including /flights, /airlines, /routes
+- **Streamlit dashboard** — 5 pages: Overview, Airline Analysis, Route Analysis, Trends & Insights, Delay Predictor
+- **Metabase BI dashboards** — 3 public dashboards, 12 charts total, no login required
 - **Fully automated** — GitHub Actions pipeline runs twice daily
+
+---
+
+## 📡 API Endpoints
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/` | Root — API info |
+| GET | `/health` | Health check + model status |
+| POST | `/predict` | Predict flight delay probability |
+| GET | `/stats` | Live flight statistics from warehouse |
+| GET | `/flights` | Recent flights with optional filters |
+| GET | `/airlines` | Airline performance summary |
+| GET | `/routes` | Most delayed routes |
+
+---
+
+## 📊 Metabase Public Dashboards
+
+| Dashboard | Charts | Public Link |
+|---|---|---|
+| **Flight Data Analytics** | 4 charts — airline counts, delay rates, domestic vs international | [View Dashboard](https://metabase-production-04c3.up.railway.app/public/dashboard/8b35977b-89c0-4b1d-a935-5a951d6bf9b1) |
+| **Time of Day Analysis** | 4 charts — time of day and day of week patterns | [View Dashboard](https://metabase-production-04c3.up.railway.app/public/dashboard/130fe479-777e-444b-bb98-4fa2b688d6db) |
+| **Route Performance** | 4 charts — route analysis, origin/destination airports | [View Dashboard](https://metabase-production-04c3.up.railway.app/public/dashboard/3d3d6e9d-ae87-470c-bedf-cf12cb9e070a) |
 
 ---
 
@@ -182,7 +208,7 @@ python ingestion/opensky_api.py
 
 ### 7. Run dbt transformations
 ```bash
-cd transform/dbt_project
+cd transform/flight_transform
 dbt run
 dbt test
 ```
@@ -201,17 +227,6 @@ docker-compose up
 uvicorn api.main:app --host 0.0.0.0 --port 8000
 streamlit run dashboard/streamlit_app/app.py
 ```
-
----
-
-## 📡 API Endpoints
-
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/` | Root — API info |
-| GET | `/health` | Health check + model status |
-| POST | `/predict` | Predict flight delay probability |
-| GET | `/stats` | Live flight statistics from warehouse |
 
 ---
 
@@ -250,4 +265,3 @@ Data Engineer @ Accenture | CS Graduate — BMSCE
 ## 📄 License
 
 MIT License
-```
