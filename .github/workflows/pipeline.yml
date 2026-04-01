@@ -82,3 +82,9 @@ jobs:
           name: flight-delay-model
           path: ml/models/flight_delay_model.pkl
           retention-days: 7
+
+      - name: Run health check
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          python ingestion/monitor.py
