@@ -20,7 +20,7 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 
 # MLflow setup
 import tempfile
-mlflow.set_tracking_uri("file://" + tempfile.gettempdir() + "/mlflow_tracking")
+mlflow.set_tracking_uri("mlruns")
 mlflow.set_experiment("flight_delay_prediction")
 
 def fetch_features():
@@ -152,9 +152,6 @@ def train_model(X, y):
         mlflow.log_metric("train_size", len(X_train))
         mlflow.log_metric("test_size", len(X_test))
         mlflow.log_metric("scale_pos_weight", scale_pos_weight)
-
-        # Log model
-        mlflow.xgboost.log_model(model, "model")
 
         print("\nModel Performance:")
         print(f"  Accuracy:  {accuracy:.4f}")
