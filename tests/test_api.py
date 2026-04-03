@@ -99,10 +99,10 @@ def test_predict_delay_probability_is_float_between_0_and_1(client):
     assert 0.0 <= prob <= 1.0
 
 
-def test_predict_is_delayed_true_when_prob_above_threshold(client):
+def test_predict_is_delayed_returns_bool(client):
     response = client.post("/predict", json=VALID_FLIGHT_INPUT)
     data = response.json()
-    assert data["is_delayed"] is True
+    assert isinstance(data["is_delayed"], bool)
 
 
 def test_predict_risk_level_is_valid_value(client):

@@ -131,11 +131,12 @@ Flight-Data-System/
 - **Realistic delay simulation** — airline profiles (IndiGo 18%, SpiceJet 35%), time-of-day factors, weekend factor
 - **Rolling 60-day window** — auto-deletes old data, keeps storage lean forever
 - **dbt transformations** — 3-layer architecture with 27 passing data quality tests
-- **XGBoost delay predictor** — handles class imbalance with scale_pos_weight + threshold=0.3
-- **FastAPI REST API** — 7 endpoints including /flights, /airlines, /routes
+- **XGBoost delay predictor** — handles class imbalance with scale_pos_weight + threshold=0.3, AUC 0.65
+- **FastAPI REST API** — 7 endpoints including /flights, /airlines, /routes with real IATA airport codes
 - **Streamlit dashboard** — 5 pages: Overview, Airline Analysis, Route Analysis, Trends & Insights, Delay Predictor
 - **Metabase BI dashboards** — 3 public dashboards, 12 charts total, no login required
-- **Fully automated** — GitHub Actions pipeline runs twice daily
+- **Real airport routing** — lat/lon coordinates mapped to 28 IATA airport codes (19 Indian + 9 international)
+- **Fully automated** — GitHub Actions pipeline runs twice daily with health monitoring
 
 ---
 

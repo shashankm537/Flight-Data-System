@@ -99,13 +99,15 @@ GitHub Actions CI/CD
 
 | Metric | Value |
 |---|---|
-| Total flights in DB | 18,778+ |
-| Days of data | 15+ days |
-| Pipeline runs | 37+ (100% success) |
+| Total flights in DB | 20,000+ |
+| Days of data | 17+ days |
+| Pipeline runs | 40+ (100% success) |
 | dbt tests passing | 27/27 |
 | pytest tests passing | 43/43 |
 | Database indexes | 13 |
+| Unique routes | 20+ real IATA routes |
 | Delay rate | ~24% |
+| Model AUC | 0.65 |
 | Model recall | 97.79% |
 | API endpoints | 7 |
 | Streamlit pages | 5 |
