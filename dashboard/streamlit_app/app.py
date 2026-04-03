@@ -261,11 +261,12 @@ elif page == "Route Analysis":
 
     with col2:
         st.subheader("Routes by Delay Rate %")
+        route_stats['avg_delay_size'] = route_stats['avg_delay'].clip(lower=1)
         fig = px.scatter(
             route_stats,
             x='total_flights',
             y='delay_rate',
-            size='avg_delay',
+            size='avg_delay_size',
             color='flight_type',
             hover_name='route',
             color_discrete_map={'domestic': '#1D9E75', 'international': '#085041'}
