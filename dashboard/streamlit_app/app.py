@@ -176,7 +176,7 @@ elif page == "Airline Analysis":
 
     df = load_flight_data()
 
-    airline_stats = df.groupby(['airline_name', 'flight_type']).agg(
+    airline_stats = df.groupby(['airline_code', 'flight_type']).agg(
         total_flights=('flight_status', 'count'),
         delayed_flights=('is_delayed', 'sum'),
         avg_delay=('arrival_delay', 'mean')
@@ -194,7 +194,7 @@ elif page == "Airline Analysis":
         fig = px.bar(
             top_delayed,
             x='delay_rate',
-            y='airline_name',
+            y='airline_code',
             orientation='h',
             color='flight_type',
             color_discrete_map={'domestic': '#1D9E75', 'international': '#085041'}
@@ -208,7 +208,7 @@ elif page == "Airline Analysis":
         fig = px.bar(
             top_avg,
             x='avg_delay',
-            y='airline_name',
+            y='airline_code',
             orientation='h',
             color='flight_type',
             color_discrete_map={'domestic': '#1D9E75', 'international': '#085041'}
@@ -218,7 +218,7 @@ elif page == "Airline Analysis":
 
     st.subheader("Full Airline Performance Table")
     st.dataframe(
-        airline_stats[['airline_name', 'flight_type', 'total_flights',
+        airline_stats[['airline_code', 'flight_type', 'total_flights',
                        'delayed_flights', 'delay_rate', 'avg_delay']]
         .sort_values('delay_rate', ascending=False),
         use_container_width=True
